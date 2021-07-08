@@ -1,35 +1,29 @@
-import sun.rmi.runtime.Log
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
-import javax.naming.Context
 
 
 fun main(args: Array<String>) {
-    exec("git rev-parse HEAD", stdIn = "yes")
-
-}
-fun exec(cmd: String, stdIn: String = "", captureOutput:Boolean = false, workingDir: File = File(".")): String? {
-    try {
-        val process = ProcessBuilder(*cmd.split("\\s".toRegex()).toTypedArray())
-            .directory(workingDir)
-            .redirectOutput(if (captureOutput) ProcessBuilder.Redirect.PIPE else ProcessBuilder.Redirect.INHERIT)
-            .redirectError(if (captureOutput) ProcessBuilder.Redirect.PIPE else ProcessBuilder.Redirect.INHERIT)
-            .start().apply {
-                if (stdIn != "") {
-                    outputStream.bufferedWriter().apply {
-                        write(stdIn)
-                        flush()
-                        close()
-                    }
-                }
-                waitFor(60, TimeUnit.SECONDS)
+    val commands = listOf("git rev-parse --short HEAD", "git branch --show-current", "git log -1 --format=%cd --date=local","git config --global user.email","git commit -m 'Message")
+            for(x in commands)
+            {
+                print(runCommand(x))
             }
-        if (captureOutput) {
-            return process.inputStream.bufferedReader().readText()
-        }
-    } catch (e: IOException) {
+}
+
+fun runCommand(command:String): String? {
+    try {
+        val parts = command.split("\\s".toRegex())
+        val proc = ProcessBuilder(*parts.toTypedArray())
+            .directory(File("."))
+            .redirectOutput(ProcessBuilder.Redirect.PIPE)
+            .redirectError(ProcessBuilder.Redirect.PIPE)
+            .start()
+
+        proc.waitFor(60, TimeUnit.MINUTES)
+        return proc.inputStream.bufferedReader().readText()
+    } catch(e: IOException) {
         e.printStackTrace()
+        return null
     }
-    return null
 }
